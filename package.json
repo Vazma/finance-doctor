@@ -1,5 +1,5 @@
 {
-  "name": "couple-finance",
+  "name": "finance-doctor",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -9,8 +9,8 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "vitest run src",
-    "test:rules": "firebase emulators:exec --only firestore --project demo-couple-finance 'vitest run rules'",
-    "emulators": "firebase emulators:start --only auth,firestore --project demo-couple-finance"
+    "test:rules": "firebase emulators:exec --only firestore --project demo-finance-doctor 'vitest run rules'",
+    "emulators": "firebase emulators:start --only auth,firestore --project demo-finance-doctor"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.5",

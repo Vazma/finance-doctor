@@ -9,7 +9,7 @@ const user = (uid, email, verified = true) =>
 
 beforeAll(async () => {
   env = await initializeTestEnvironment({
-    projectId: 'demo-couple-finance',
+    projectId: 'demo-finance-doctor',
     firestore: { rules: readFileSync('firestore.rules', 'utf8'), host: '127.0.0.1', port: 8080 },
   })
   await env.withSecurityRulesDisabled(async (ctx) => {

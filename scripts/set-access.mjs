@@ -5,7 +5,7 @@ const emails = (process.argv[2] || '').split(',').map((e) => e.trim().toLowerCas
 if (!emails.length) throw new Error('Usage: node scripts/set-access.mjs a@x.com,b@y.com')
 
 const emulator = process.env.FIRESTORE_EMULATOR_HOST
-const projectId = process.env.PROJECT_ID || 'demo-couple-finance'
+const projectId = process.env.PROJECT_ID || 'demo-finance-doctor'
 const base = emulator ? `http://${emulator}` : 'https://firestore.googleapis.com'
 const url = `${base}/v1/projects/${projectId}/databases/(default)/documents/config/access`
 const token = emulator ? 'owner' : process.env.ACCESS_TOKEN
