@@ -7,7 +7,7 @@ export const THEMES = [
   { id: 'lavender', name: 'Lavanda', css: 'linear-gradient(160deg,#1c1a2e,#353048)' },
   { id: 'rose', name: 'Rosa', css: 'linear-gradient(160deg,#2b1a22,#4d3040)' },
   { id: 'gold', name: 'Arena', css: 'linear-gradient(160deg,#25211a,#423a2c)' },
-  { id: 'aurora', name: 'Aurora', css: 'linear-gradient(160deg,#13242a,#262a42,#352b45)' },
+  { id: 'olive', name: 'Olivo', css: 'linear-gradient(160deg,#1c1f16,#363b2a)' },
   { id: 'graphite', name: 'Grafito', css: 'linear-gradient(160deg,#18181b,#303036)' },
   { id: 'peach', name: 'Terracota', css: 'linear-gradient(160deg,#2a1d18,#4a3128)' },
 ]
