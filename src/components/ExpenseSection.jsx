@@ -1,5 +1,5 @@
-import { addDoc, collection, deleteDoc, doc, serverTimestamp } from 'firebase/firestore'
-import { Plus, Trash2 } from 'lucide-react'
+import { addDoc, collection, deleteDoc, doc, serverTimestamp, updateDoc } from 'firebase/firestore'
+import { Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { dateKey, dateLabel, dueDate, expenseAmount, formatMoney } from '../lib/finance.js'
 import { db } from '../lib/firebase.js'
@@ -14,6 +14,7 @@ export default function ExpenseSection({ path, items, month, title }) {
   const [kind, setKind] = useState('fixed')
   const [day, setDay] = useState('')
   const [date, setDate] = useState('')
+  const [editing, setEditing] = useState(null)
   const today = dateKey()
   const visible = items
     .filter((e) => expenseAmount(e, month) > 0)
@@ -21,22 +22,41 @@ export default function ExpenseSection({ path, items, month, title }) {
     .sort((a, b) => (a.due || '9').localeCompare(b.due || '9'))
 
   function toggle() {
-    if (!open) setDate(today.startsWith(month) ? today : `${month}-01`)
-    setOpen(!open)
+    if (!open || editing) {
+      setEditing(null)
+      setName('')
+      setAmount('')
+      setKind('fixed')
+      setDay('')
+      setDate(today.startsWith(month) ? today : `${month}-01`)
+      setOpen(true)
+    } else setOpen(false)
   }
 
-  async function add(e) {
+  function startEdit(e) {
+    setEditing(e.id)
+    setName(e.name)
+    setAmount(String(e.amount))
+    setKind(e.kind)
+    setDay(e.day ? String(e.day) : '')
+    setDate(e.date || `${e.month || month}-01`)
+    setOpen(true)
+  }
+
+  async function save(e) {
     e.preventDefault()
     if (!name.trim() || !(Number(amount) > 0)) return
-    await addDoc(collection(db, path), {
+    const data = {
       name: name.trim(),
       amount: Number(amount),
       kind,
       day: kind === 'fixed' ? Number(day) || null : null,
       date: kind === 'variable' ? date : null,
       month: kind === 'variable' ? date.slice(0, 7) : null,
-      createdAt: serverTimestamp(),
-    })
+    }
+    if (editing) await updateDoc(doc(db, path, editing), { ...data, updatedAt: serverTimestamp() })
+    else await addDoc(collection(db, path), { ...data, createdAt: serverTimestamp() })
+    setEditing(null)
     setName('')
     setAmount('')
     setDay('')
@@ -53,7 +73,7 @@ export default function ExpenseSection({ path, items, month, title }) {
       }
     >
       {open && (
-        <form onSubmit={add} className="mb-3 grid grid-cols-2 gap-2">
+        <form onSubmit={save} className="mb-3 grid grid-cols-2 gap-2">
           <input className="field col-span-2" placeholder="Concepto (renta, luz…)" value={name} onChange={(e) => setName(e.target.value)} />
           <MoneyInput placeholder="Monto" value={amount} onChange={setAmount} />
           <select className="field" value={kind} onChange={(e) => setKind(e.target.value)}>
@@ -65,7 +85,7 @@ export default function ExpenseSection({ path, items, month, title }) {
           ) : (
             <DateSelect className="col-span-2" value={date} onChange={setDate} />
           )}
-          <button className="col-span-2 rounded-lg bg-white py-2 text-sm font-semibold text-slate-900">Guardar</button>
+          <button className="col-span-2 rounded-lg bg-white py-2 text-sm font-semibold text-slate-900">{editing ? 'Guardar cambios' : 'Guardar'}</button>
         </form>
       )}
       {visible.length === 0 ? (
@@ -83,6 +103,9 @@ export default function ExpenseSection({ path, items, month, title }) {
               </div>
               <div className="flex items-center gap-2">
                 <span className="font-medium">{formatMoney(e.amount)}</span>
+                <button className="p-1 text-white/40 hover:text-white" onClick={() => startEdit(e)} aria-label="Editar">
+                  <Pencil size={14} />
+                </button>
                 <button className="p-1 text-white/40 hover:text-white" onClick={() => deleteDoc(doc(db, path, e.id))} aria-label="Eliminar">
                   <Trash2 size={14} />
                 </button>

@@ -1,5 +1,5 @@
-import { addDoc, collection, deleteDoc, doc, serverTimestamp } from 'firebase/firestore'
-import { Plus, Trash2 } from 'lucide-react'
+import { addDoc, collection, deleteDoc, doc, serverTimestamp, updateDoc } from 'firebase/firestore'
+import { Pencil, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { commitmentEnd, dateKey, dueDate, formatMoney, monthLabel, paymentNumber, remainingBalance } from '../lib/finance.js'
 import { db } from '../lib/firebase.js'
@@ -15,27 +15,54 @@ export default function CommitmentSection({ path, items, month, title }) {
   const [months, setMonths] = useState('')
   const [startMonth, setStartMonth] = useState(month)
   const [day, setDay] = useState('')
+  const [editing, setEditing] = useState(null)
   const today = dateKey()
   const active = items
     .filter((c) => paymentNumber(c, month) > 0)
     .map((c) => ({ ...c, due: dueDate(c, month) }))
     .sort((a, b) => (a.due || '9').localeCompare(b.due || '9'))
 
-  async function add(e) {
+  function toggle() {
+    if (!open || editing) {
+      setEditing(null)
+      setType('msi')
+      setName('')
+      setAmount('')
+      setMonths('')
+      setStartMonth(month)
+      setDay('')
+      setOpen(true)
+    } else setOpen(false)
+  }
+
+  function startEdit(c) {
+    setEditing(c.id)
+    setType(c.type)
+    setName(c.name)
+    setAmount(String(c.type === 'msi' && c.months ? Math.round(c.monthly * c.months * 100) / 100 : c.monthly))
+    setMonths(c.months ? String(c.months) : '')
+    setStartMonth(c.startMonth)
+    setDay(c.day ? String(c.day) : '')
+    setOpen(true)
+  }
+
+  async function save(e) {
     e.preventDefault()
     const n = Number(months) || 0
     const value = Number(amount)
     if (!name.trim() || !(value > 0) || (type === 'msi' && !n)) return
     const monthly = type === 'msi' ? Math.round((value / n) * 100) / 100 : value
-    await addDoc(collection(db, path), {
+    const data = {
       name: name.trim(),
       type,
       monthly,
       months: n || null,
       startMonth,
       day: Number(day) || null,
-      createdAt: serverTimestamp(),
-    })
+    }
+    if (editing) await updateDoc(doc(db, path, editing), { ...data, updatedAt: serverTimestamp() })
+    else await addDoc(collection(db, path), { ...data, createdAt: serverTimestamp() })
+    setEditing(null)
     setName('')
     setAmount('')
     setMonths('')
@@ -47,16 +74,13 @@ export default function CommitmentSection({ path, items, month, title }) {
     <Section
       title={title}
       action={
-        <button className="rounded-full bg-white/15 p-1.5 hover:bg-white/25" onClick={() => {
-            if (!open) setStartMonth(month)
-            setOpen(!open)
-          }} aria-label="Agregar compromiso">
+        <button className="rounded-full bg-white/15 p-1.5 hover:bg-white/25" onClick={toggle} aria-label="Agregar compromiso">
           <Plus size={16} />
         </button>
       }
     >
       {open && (
-        <form onSubmit={add} className="mb-3 grid grid-cols-2 gap-2">
+        <form onSubmit={save} className="mb-3 grid grid-cols-2 gap-2">
           <div className="col-span-2 flex gap-1 rounded-lg bg-black/20 p-1 text-sm">
             {Object.entries({ msi: 'Compra a meses', credit: 'Crédito / préstamo' }).map(([k, label]) => (
               <button type="button" key={k} onClick={() => setType(k)} className={`flex-1 rounded-md py-1.5 ${type === k ? 'bg-white text-slate-900' : 'text-white/70'}`}>
@@ -72,7 +96,7 @@ export default function CommitmentSection({ path, items, month, title }) {
             <MonthSelect value={startMonth} onChange={setStartMonth} />
           </div>
           <DaySelect className="col-span-2" value={day} onChange={setDay} />
-          <button className="col-span-2 rounded-lg bg-white py-2 text-sm font-semibold text-slate-900">Guardar</button>
+          <button className="col-span-2 rounded-lg bg-white py-2 text-sm font-semibold text-slate-900">{editing ? 'Guardar cambios' : 'Guardar'}</button>
         </form>
       )}
       {active.length === 0 ? (
@@ -96,6 +120,9 @@ export default function CommitmentSection({ path, items, month, title }) {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="font-medium">{formatMoney(c.monthly)}</span>
+                  <button className="p-1 text-white/40 hover:text-white" onClick={() => startEdit(c)} aria-label="Editar">
+                    <Pencil size={14} />
+                  </button>
                   <button className="p-1 text-white/40 hover:text-white" onClick={() => deleteDoc(doc(db, path, c.id))} aria-label="Eliminar">
                     <Trash2 size={14} />
                   </button>
