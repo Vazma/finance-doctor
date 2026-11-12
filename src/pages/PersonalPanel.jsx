@@ -8,7 +8,7 @@ import { incomeRatios, monthTotals, splitByIncome } from '../lib/finance.js'
 import { db } from '../lib/firebase.js'
 import { useCollection } from '../lib/hooks.js'
 
-export default function PersonalPanel({ user, month, members, shared }) {
+export default function PersonalPanel({ user, month, members, shared, householdPath }) {
   const base = `users/${user.uid}`
   const expenses = useCollection(`${base}/expenses`)
   const commitments = useCollection(`${base}/commitments`)
@@ -27,7 +27,7 @@ export default function PersonalPanel({ user, month, members, shared }) {
   function saveIncome() {
     const value = Number(income) || 0
     if (value === (Number(me?.income) || 0)) return
-    setDoc(doc(db, 'households/home/members', user.uid), { income: value, updatedAt: serverTimestamp() }, { merge: true })
+    setDoc(doc(db, householdPath, 'members', user.uid), { income: value, updatedAt: serverTimestamp() }, { merge: true })
   }
 
   return (

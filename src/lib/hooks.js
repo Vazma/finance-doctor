@@ -5,6 +5,7 @@ import { db } from './firebase.js'
 export function useCollection(path, { ordered = true } = {}) {
   const [items, setItems] = useState([])
   useEffect(() => {
+    setItems([])
     if (!path) return undefined
     const ref = collection(db, path)
     const q = ordered ? query(ref, orderBy('createdAt', 'asc')) : ref
@@ -16,6 +17,7 @@ export function useCollection(path, { ordered = true } = {}) {
 export function useDocument(path) {
   const [data, setData] = useState(undefined)
   useEffect(() => {
+    setData(undefined)
     if (!path) return undefined
     return onSnapshot(doc(db, path), (snap) => setData(snap.exists() ? snap.data() : null))
   }, [path])

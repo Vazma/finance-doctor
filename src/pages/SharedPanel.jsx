@@ -1,15 +1,16 @@
 import CommitmentSection from '../components/CommitmentSection.jsx'
 import ExpenseSection from '../components/ExpenseSection.jsx'
 import Projection from '../components/Projection.jsx'
+import InviteCard from '../components/InviteCard.jsx'
 import { Section, Stat } from '../components/ui.jsx'
 import { formatMoney, incomeRatios, monthTotals, splitByIncome } from '../lib/finance.js'
 
-export default function SharedPanel({ month, members, shared }) {
+export default function SharedPanel({ user, month, members, shared, householdPath, householdId }) {
   const totals = monthTotals(shared, month)
   const incomes = Object.fromEntries(members.map((m) => [m.id, m.income || 0]))
   const shares = splitByIncome(totals.total, incomes)
   const ratios = incomeRatios(incomes)
-  const base = 'households/home'
+  const base = householdPath
 
   return (
     <div className="space-y-4">
@@ -20,8 +21,9 @@ export default function SharedPanel({ month, members, shared }) {
         <Stat label="Total del mes" value={totals.total} strong />
       </div>
 
+      {members.length < 2 && <InviteCard householdId={householdId} user={user} />}
+
       <Section title="Reparto según ingreso">
-        {members.length < 2 && <p className="mb-2 text-xs text-white/50">Cuando tu pareja entre por primera vez aparecerá aquí.</p>}
         <ul className="space-y-3">
           {members.map((m) => (
             <li key={m.id}>

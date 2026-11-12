@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { auth, googleProvider } from '../lib/firebase.js'
 import { themeCss } from '../lib/themes.js'
 
-export default function Login() {
+export default function Login({ invited }) {
   const [error, setError] = useState('')
   async function signIn() {
     setError('')
@@ -18,7 +18,9 @@ export default function Login() {
       <div className="glass w-full max-w-sm p-8 text-center">
         <img src="/favicon.svg" alt="" className="mx-auto mb-4 size-14" />
         <h1 className="text-2xl font-semibold">Nuestras finanzas</h1>
-        <p className="mt-2 text-sm text-white/60">Lo tuyo, lo mío y lo nuestro, en un solo lugar.</p>
+        <p className="mt-2 text-sm text-white/60">
+          {invited ? 'Te invitaron a un hogar. Entra con tu cuenta para unirte.' : 'Lo tuyo, lo mío y lo nuestro, en un solo lugar.'}
+        </p>
         <button onClick={signIn} className="mt-6 w-full rounded-xl bg-white py-3 font-semibold text-slate-900">
           Entrar con Google
         </button>

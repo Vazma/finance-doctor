@@ -1,58 +1,54 @@
 import { onAuthStateChanged, signOut } from 'firebase/auth'
-import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore'
+import { doc, setDoc } from 'firebase/firestore'
 import { ChevronLeft, ChevronRight, LogOut, Palette } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import ThemePicker from './components/ThemePicker.jsx'
 import { addMonths, monthKey, monthLabel } from './lib/finance.js'
-import { HOUSEHOLD_ID, allowedEmails, auth, db } from './lib/firebase.js'
+import { auth, db } from './lib/firebase.js'
+import { acceptInvite, clearPendingInvite, takeInviteFromUrl } from './lib/households.js'
 import { useCollection, useDocument } from './lib/hooks.js'
 import { themeCss } from './lib/themes.js'
 import Login from './pages/Login.jsx'
-import NoAccess from './pages/NoAccess.jsx'
+import Onboarding from './pages/Onboarding.jsx'
+import InviteResult from './pages/InviteResult.jsx'
 import PersonalPanel from './pages/PersonalPanel.jsx'
 import SharedPanel from './pages/SharedPanel.jsx'
 
 export default function App() {
   const [user, setUser] = useState(undefined)
-  const [access, setAccess] = useState('checking')
+  const [pendingInvite, setPendingInvite] = useState(() => takeInviteFromUrl())
+  const [inviteStatus, setInviteStatus] = useState(null)
+  const profile = useDocument(user ? `users/${user.uid}` : null)
 
-  useEffect(
-    () =>
-      onAuthStateChanged(auth, async (u) => {
-        setUser(u)
-        if (!u) return setAccess('checking')
-        const email = (u.email || '').toLowerCase()
-        if (allowedEmails.length && !allowedEmails.includes(email)) return setAccess('denied')
-        try {
-          await getDoc(doc(db, 'config/access'))
-          const memberRef = doc(db, `households/${HOUSEHOLD_ID}/members`, u.uid)
-          const existing = await getDoc(memberRef)
-          await setDoc(
-            memberRef,
-            { email, displayName: u.displayName || email, ...(existing.exists() ? {} : { createdAt: serverTimestamp() }) },
-            { merge: true },
-          )
-          setAccess('ok')
-        } catch {
-          setAccess('denied')
-        }
-      }),
-    [],
-  )
+  useEffect(() => onAuthStateChanged(auth, setUser), [])
+
+  useEffect(() => {
+    if (!user || !pendingInvite || profile === undefined) return
+    let cancelled = false
+    acceptInvite(pendingInvite, user, profile?.householdId).then((status) => {
+      if (cancelled) return
+      clearPendingInvite()
+      setPendingInvite(null)
+      if (status === 'invalid' || status === 'has-partner') setInviteStatus(status)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [user, pendingInvite, profile])
 
   if (user === undefined) return null
-  if (!user) return <Login />
-  if (access === 'denied') return <NoAccess email={user.email} />
-  if (access === 'checking') return null
-  return <Dashboard user={user} />
+  if (!user) return <Login invited={Boolean(pendingInvite)} />
+  if (inviteStatus) return <InviteResult status={inviteStatus} onContinue={() => setInviteStatus(null)} />
+  if (profile === undefined || pendingInvite) return null
+  if (!profile?.householdId) return <Onboarding user={user} />
+  return <Dashboard user={user} profile={profile} householdId={profile.householdId} />
 }
 
-function Dashboard({ user }) {
+function Dashboard({ user, profile, householdId }) {
   const [tab, setTab] = useState('personal')
   const [month, setMonth] = useState(monthKey())
   const [picking, setPicking] = useState(false)
-  const householdPath = `households/${HOUSEHOLD_ID}`
-  const profile = useDocument(`users/${user.uid}`)
+  const householdPath = `households/${householdId}`
   const household = useDocument(householdPath)
   const members = useCollection(`${householdPath}/members`, { ordered: false })
   const shared = {
@@ -112,9 +108,9 @@ function Dashboard({ user }) {
 
       <main className="mx-auto mt-4 max-w-4xl px-4">
         {tab === 'personal' ? (
-          <PersonalPanel user={user} month={month} members={members} shared={shared} />
+          <PersonalPanel user={user} month={month} members={members} shared={shared} householdPath={householdPath} />
         ) : (
-          <SharedPanel month={month} members={members} shared={shared} />
+          <SharedPanel user={user} month={month} members={members} shared={shared} householdPath={householdPath} householdId={householdId} />
         )}
       </main>
 
