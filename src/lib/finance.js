@@ -97,3 +97,62 @@ function round2(n) {
 
 const mxn = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 })
 export const formatMoney = (n) => mxn.format(Number(n) || 0)
+
+// Dates are "YYYY-MM-DD" keys. Fixed expenses and commitments may carry a `day` of the month;
+// variable expenses carry an exact `date`.
+export function dateKey(date = new Date()) {
+  return `${monthKey(date)}-${String(date.getDate()).padStart(2, '0')}`
+}
+
+export function daysInMonth(key) {
+  const [y, m] = key.split('-').map(Number)
+  return new Date(y, m, 0).getDate()
+}
+
+export function onDay(month, day) {
+  return `${month}-${String(Math.min(Number(day), daysInMonth(month))).padStart(2, '0')}`
+}
+
+export function daysBetween(from, to) {
+  const utc = (k) => {
+    const [y, m, d] = k.split('-').map(Number)
+    return Date.UTC(y, m - 1, d)
+  }
+  return Math.round((utc(to) - utc(from)) / 86400000)
+}
+
+export function dateLabel(key, opts = { day: 'numeric', month: 'short' }) {
+  const [y, m, d] = key.split('-').map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString('es-MX', opts)
+}
+
+export function dueDate(item, month) {
+  if (item.kind === 'variable') return item.month === month && item.date ? item.date : null
+  if (!item.day) return null
+  if (item.startMonth && !paymentNumber(item, month)) return null
+  return onDay(month, item.day)
+}
+
+export function itemAmount(item, month) {
+  return item.startMonth ? commitmentPayment(item, month) : expenseAmount(item, month)
+}
+
+export function upcomingPayments(items, today, days = 7) {
+  const months = [today.slice(0, 7), addMonths(today.slice(0, 7), 1)]
+  const out = []
+  for (const item of items) {
+    for (const month of months) {
+      const date = dueDate(item, month)
+      if (!date) continue
+      const inDays = daysBetween(today, date)
+      if (inDays >= 0 && inDays <= days) out.push({ item, date, inDays, amount: itemAmount(item, month) })
+    }
+  }
+  return out.sort((a, b) => a.date.localeCompare(b.date))
+}
+
+export function relativeDay(inDays) {
+  if (inDays === 0) return 'hoy'
+  if (inDays === 1) return 'mañana'
+  return `en ${inDays} días`
+}

@@ -1,9 +1,9 @@
 import { addDoc, collection, deleteDoc, doc, serverTimestamp } from 'firebase/firestore'
 import { Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
-import { commitmentEnd, formatMoney, monthLabel, paymentNumber, remainingBalance } from '../lib/finance.js'
+import { commitmentEnd, dateKey, dueDate, formatMoney, monthLabel, paymentNumber, remainingBalance } from '../lib/finance.js'
 import { db } from '../lib/firebase.js'
-import { MoneyInput, Section } from './ui.jsx'
+import { DaySelect, DueLabel, MonthSelect, MoneyInput, Section } from './ui.jsx'
 
 const TYPE_LABEL = { credit: 'Crédito', msi: 'Meses' }
 
@@ -14,7 +14,12 @@ export default function CommitmentSection({ path, items, month, title }) {
   const [amount, setAmount] = useState('')
   const [months, setMonths] = useState('')
   const [startMonth, setStartMonth] = useState(month)
-  const active = items.filter((c) => paymentNumber(c, month) > 0)
+  const [day, setDay] = useState('')
+  const today = dateKey()
+  const active = items
+    .filter((c) => paymentNumber(c, month) > 0)
+    .map((c) => ({ ...c, due: dueDate(c, month) }))
+    .sort((a, b) => (a.due || '9').localeCompare(b.due || '9'))
 
   async function add(e) {
     e.preventDefault()
@@ -28,11 +33,13 @@ export default function CommitmentSection({ path, items, month, title }) {
       monthly,
       months: n || null,
       startMonth,
+      day: Number(day) || null,
       createdAt: serverTimestamp(),
     })
     setName('')
     setAmount('')
     setMonths('')
+    setDay('')
     setOpen(false)
   }
 
@@ -40,7 +47,10 @@ export default function CommitmentSection({ path, items, month, title }) {
     <Section
       title={title}
       action={
-        <button className="rounded-full bg-white/15 p-1.5 hover:bg-white/25" onClick={() => setOpen(!open)} aria-label="Agregar compromiso">
+        <button className="rounded-full bg-white/15 p-1.5 hover:bg-white/25" onClick={() => {
+            if (!open) setStartMonth(month)
+            setOpen(!open)
+          }} aria-label="Agregar compromiso">
           <Plus size={16} />
         </button>
       }
@@ -57,10 +67,11 @@ export default function CommitmentSection({ path, items, month, title }) {
           <input className="field col-span-2" placeholder={type === 'msi' ? 'Qué compraste (Amazon, pantalla…)' : 'Crédito (carro…)'} value={name} onChange={(e) => setName(e.target.value)} />
           <MoneyInput placeholder={type === 'msi' ? 'Precio total' : 'Mensualidad'} value={amount} onChange={setAmount} />
           <input type="number" min="1" className="field" placeholder={type === 'msi' ? 'Meses' : 'Meses (opcional)'} value={months} onChange={(e) => setMonths(e.target.value)} />
-          <label className="col-span-2 flex items-center gap-2 text-xs text-white/60">
-            Primer pago
-            <input type="month" className="field" value={startMonth} onChange={(e) => setStartMonth(e.target.value)} />
-          </label>
+          <div className="col-span-2 space-y-1">
+            <div className="text-xs text-white/60">Primer pago</div>
+            <MonthSelect value={startMonth} onChange={setStartMonth} />
+          </div>
+          <DaySelect className="col-span-2" value={day} onChange={setDay} />
           <button className="col-span-2 rounded-lg bg-white py-2 text-sm font-semibold text-slate-900">Guardar</button>
         </form>
       )}
@@ -72,13 +83,14 @@ export default function CommitmentSection({ path, items, month, title }) {
             const end = commitmentEnd(c)
             const left = remainingBalance(c, month)
             return (
-              <li key={c.id} className="flex items-center justify-between gap-2 py-2 text-sm">
+              <li key={c.id} className={`flex items-center justify-between gap-2 py-2 text-sm ${c.due && c.due < today ? 'opacity-60' : ''}`}>
                 <div>
                   <div>
                     {c.name} <span className="text-xs text-white/50">· {TYPE_LABEL[c.type]}</span>
                   </div>
                   <div className="text-xs text-white/50">
                     {c.months ? `Pago ${paymentNumber(c, month)} de ${c.months} · termina ${monthLabel(end, { month: 'short', year: 'numeric' })}` : 'Sin fecha de término'}
+                    <DueLabel date={c.due} today={today} />
                     {left != null && ` · restan ${formatMoney(left)}`}
                   </div>
                 </div>

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   addMonths,
+  dueDate,
+  upcomingPayments,
   commitmentEnd,
   commitmentPayment,
   monthTotals,
@@ -55,5 +57,33 @@ describe('monthTotals', () => {
       '2026-12',
     )
     expect(t).toEqual({ fixed: 20000, variable: 3000, committed: 1500, total: 24500 })
+  })
+})
+
+describe('due dates', () => {
+  it('clamps the payment day to the month length', () => {
+    expect(dueDate({ kind: 'fixed', day: 31 }, '2027-02')).toBe('2027-02-28')
+    expect(dueDate({ kind: 'fixed' }, '2027-02')).toBe(null)
+  })
+
+  it('skips commitments outside their active months', () => {
+    const c = { startMonth: '2026-11', months: 2, monthly: 500, day: 15 }
+    expect(dueDate(c, '2026-12')).toBe('2026-12-15')
+    expect(dueDate(c, '2027-01')).toBe(null)
+  })
+
+  it('lists payments due in the next 7 days across the month boundary', () => {
+    const items = [
+      { kind: 'fixed', name: 'Renta', amount: 20000, day: 1 },
+      { kind: 'fixed', name: 'Luz', amount: 800, day: 15 },
+      { kind: 'variable', name: 'Súper', amount: 1200, month: '2026-11', date: '2026-11-28' },
+      { name: 'Pantalla', startMonth: '2026-10', months: 6, monthly: 1000, day: 30 },
+    ]
+    const up = upcomingPayments(items, '2026-11-27')
+    expect(up.map((u) => [u.item.name, u.date, u.inDays, u.amount])).toEqual([
+      ['Súper', '2026-11-28', 1, 1200],
+      ['Pantalla', '2026-11-30', 3, 1000],
+      ['Renta', '2026-12-01', 4, 20000],
+    ])
   })
 })

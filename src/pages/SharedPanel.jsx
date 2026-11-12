@@ -1,6 +1,7 @@
 import CommitmentSection from '../components/CommitmentSection.jsx'
 import ExpenseSection from '../components/ExpenseSection.jsx'
 import Projection from '../components/Projection.jsx'
+import UpcomingPayments from '../components/UpcomingPayments.jsx'
 import InviteCard from '../components/InviteCard.jsx'
 import { Section, Stat } from '../components/ui.jsx'
 import { formatMoney, incomeRatios, monthTotals, splitByIncome } from '../lib/finance.js'
@@ -20,6 +21,8 @@ export default function SharedPanel({ user, month, members, shared, householdPat
         <Stat label="A meses" value={totals.committed} />
         <Stat label="Total del mes" value={totals.total} strong />
       </div>
+
+      <UpcomingPayments expenses={shared.expenses} commitments={shared.commitments} />
 
       {members.length < 2 && <InviteCard householdId={householdId} user={user} />}
 
