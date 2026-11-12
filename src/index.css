@@ -1,0 +1,24 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  @apply bg-slate-950 text-white antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.glass {
+  @apply rounded-2xl border border-white/10 bg-white/10 backdrop-blur-md;
+}
+
+.field {
+  @apply w-full rounded-lg border border-white/15 bg-black/20 px-3 py-2 text-sm text-white placeholder:text-white/40 outline-none focus:border-white/40;
+}
