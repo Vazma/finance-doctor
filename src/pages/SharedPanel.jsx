@@ -3,13 +3,14 @@ import ExpenseSection from '../components/ExpenseSection.jsx'
 import Projection from '../components/Projection.jsx'
 import UpcomingPayments from '../components/UpcomingPayments.jsx'
 import InviteCard from '../components/InviteCard.jsx'
-import { Section, Stat } from '../components/ui.jsx'
-import { formatMoney, incomeRatios, monthTotals, splitByIncome } from '../lib/finance.js'
+import { SharedHealth } from '../components/Health.jsx'
+import SplitTable from '../components/SplitTable.jsx'
+import { Stat } from '../components/ui.jsx'
+import { incomeRatios, monthTotals } from '../lib/finance.js'
 
 export default function SharedPanel({ user, month, members, shared, householdPath, householdId }) {
   const totals = monthTotals(shared, month)
   const incomes = Object.fromEntries(members.map((m) => [m.id, m.income || 0]))
-  const shares = splitByIncome(totals.total, incomes)
   const ratios = incomeRatios(incomes)
   const base = householdPath
 
@@ -26,29 +27,13 @@ export default function SharedPanel({ user, month, members, shared, householdPat
 
       {members.length < 2 && <InviteCard householdId={householdId} user={user} />}
 
-      <Section title="Reparto según ingreso">
-        <ul className="space-y-3">
-          {members.map((m) => (
-            <li key={m.id}>
-              <div className="flex justify-between text-sm">
-                <span>{m.displayName || m.email}</span>
-                <span className="font-semibold">{formatMoney(shares[m.id])}</span>
-              </div>
-              <div className="mt-1 h-2 overflow-hidden rounded-full bg-black/20">
-                <div className="h-full rounded-full bg-white/80" style={{ width: `${(ratios[m.id] || 0) * 100}%` }} />
-              </div>
-              <div className="mt-0.5 text-xs text-white/50">
-                {Math.round((ratios[m.id] || 0) * 100)}% · ingreso {formatMoney(m.income)}
-              </div>
-            </li>
-          ))}
-        </ul>
-      </Section>
+      <SplitTable members={members} shared={shared} month={month} incomes={incomes} ratios={ratios} />
 
       <div className="grid gap-4 md:grid-cols-2">
         <ExpenseSection title="Gastos de la casa" path={`${base}/expenses`} items={shared.expenses} month={month} />
         <CommitmentSection title="Compras a meses de los dos" path={`${base}/commitments`} items={shared.commitments} month={month} />
       </div>
+      <SharedHealth members={members} sharedTotal={totals.total} commitments={shared.commitments} month={month} />
       <Projection expenses={shared.expenses} commitments={shared.commitments} from={month} />
     </div>
   )

@@ -3,10 +3,11 @@ import { Check, Pencil } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import CommitmentSection from '../components/CommitmentSection.jsx'
 import ExpenseSection from '../components/ExpenseSection.jsx'
+import { PersonalHealth } from '../components/Health.jsx'
 import Projection from '../components/Projection.jsx'
 import UpcomingPayments from '../components/UpcomingPayments.jsx'
 import { MoneyInput, Section, Stat } from '../components/ui.jsx'
-import { incomeRatios, monthTotals, splitByIncome } from '../lib/finance.js'
+import { addMonths, incomeRatios, monthKey, monthTotals, splitByIncome } from '../lib/finance.js'
 import { db } from '../lib/firebase.js'
 import { useCollection } from '../lib/hooks.js'
 
@@ -26,6 +27,18 @@ export default function PersonalPanel({ user, month, members, shared, householdP
   const mine = monthTotals({ expenses, commitments }, month)
   const grossIncome = Number(me?.income) || 0
   const available = grossIncome - myShare - mine.total
+
+  // Publish only monthly totals so the household can answer "does one salary cover it?" without seeing details.
+  useEffect(() => {
+    if (!me || !expenses.loaded || !commitments.loaded) return
+    const totals = {}
+    for (let i = -1; i <= 12; i++) {
+      const m = addMonths(monthKey(), i)
+      totals[m] = Math.round(monthTotals({ expenses, commitments }, m).total)
+    }
+    if (Object.entries(totals).every(([m, v]) => me.personalTotals?.[m] === v)) return
+    setDoc(doc(db, householdPath, 'members', user.uid), { personalTotals: totals }, { merge: true })
+  }, [me, expenses, commitments, householdPath, user.uid])
 
   function saveIncome() {
     setEditingIncome(false)
@@ -87,6 +100,7 @@ export default function PersonalPanel({ user, month, members, shared, householdP
         <CommitmentSection title="Mis créditos y meses" path={`${base}/commitments`} items={commitments} month={month} />
         <ExpenseSection title="Mis gastos" path={`${base}/expenses`} items={expenses} month={month} />
       </div>
+      <PersonalHealth income={grossIncome} committed={mine.fixed + mine.committed + myShare} commitments={commitments} month={month} />
       <Projection expenses={expenses} commitments={commitments} from={month} />
     </div>
   )

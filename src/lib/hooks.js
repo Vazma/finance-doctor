@@ -9,7 +9,11 @@ export function useCollection(path, { ordered = true } = {}) {
     if (!path) return undefined
     const ref = collection(db, path)
     const q = ordered ? query(ref, orderBy('createdAt', 'asc')) : ref
-    return onSnapshot(q, (snap) => setItems(snap.docs.map((d) => ({ id: d.id, ...d.data() }))))
+    return onSnapshot(q, (snap) => {
+      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
+      list.loaded = true
+      setItems(list)
+    })
   }, [path, ordered])
   return items
 }

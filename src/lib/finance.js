@@ -156,3 +156,45 @@ export function relativeDay(inDays) {
   if (inDays === 1) return 'mañana'
   return `en ${inDays} días`
 }
+
+// Per-item split of the shared month, grouped as fixed / variable / committed.
+export function shareRows({ expenses = [], commitments = [] }, month, incomes) {
+  const rows = []
+  for (const e of expenses) {
+    const amount = expenseAmount(e, month)
+    if (amount > 0) rows.push({ id: e.id, name: e.name, group: e.kind === 'fixed' ? 'fixed' : 'variable', amount, due: dueDate(e, month) })
+  }
+  for (const c of commitments) {
+    const amount = commitmentPayment(c, month)
+    if (amount > 0) rows.push({ id: c.id, name: c.name, group: 'committed', amount, due: dueDate(c, month) })
+  }
+  return rows.map((r) => ({ ...r, shares: splitByIncome(r.amount, incomes) }))
+}
+
+// Months (within the window) where finished commitments stop charging, with the amount freed.
+export function freedSchedule(commitments, from, count = 12) {
+  const byMonth = {}
+  for (const c of commitments) {
+    const end = commitmentEnd(c)
+    if (!end) continue
+    const freed = addMonths(end, 1)
+    const offset = monthsBetween(from, freed)
+    if (offset < 1 || offset > count) continue
+    byMonth[freed] ??= { month: freed, amount: 0, names: [] }
+    byMonth[freed].amount += Number(c.monthly) || 0
+    byMonth[freed].names.push(c.name)
+  }
+  return Object.values(byMonth).sort((a, b) => a.month.localeCompare(b.month))
+}
+
+// Share of gross income already spoken for before the month starts (fixed + installments + shared part).
+export function committedRatio(income, committed) {
+  return income > 0 ? committed / income : null
+}
+
+export function healthLevel(ratio) {
+  if (ratio == null) return null
+  if (ratio < 0.5) return 'good'
+  if (ratio < 0.7) return 'warn'
+  return 'bad'
+}

@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   addMonths,
+  freedSchedule,
+  healthLevel,
+  shareRows,
   dueDate,
   upcomingPayments,
   commitmentEnd,
@@ -85,5 +88,29 @@ describe('due dates', () => {
       ['Pantalla', '2026-11-30', 3, 1000],
       ['Renta', '2026-12-01', 4, 20000],
     ])
+  })
+})
+
+describe('health metrics', () => {
+  it('splits each shared item by income', () => {
+    const rows = shareRows({ expenses: [{ id: 'r', name: 'Renta', kind: 'fixed', amount: 20000 }] }, '2026-11', { a: 50000, b: 60000 })
+    expect(rows[0].shares).toEqual({ a: 9090.91, b: 10909.09 })
+    expect(rows[0].group).toBe('fixed')
+  })
+
+  it('lists the month after each commitment ends', () => {
+    const items = [
+      { name: 'Pantalla', startMonth: '2026-10', months: 6, monthly: 1000 },
+      { name: 'Tenis', startMonth: '2026-12', months: 3, monthly: 500 },
+      { name: 'Carro', startMonth: '2024-01', months: 60, monthly: 11000 },
+    ]
+    expect(freedSchedule(items, '2026-11')).toEqual([
+      { month: '2027-03', amount: 500, names: ['Tenis'] },
+      { month: '2027-04', amount: 1000, names: ['Pantalla'] },
+    ])
+  })
+
+  it('grades the committed share of income', () => {
+    expect([healthLevel(0.4), healthLevel(0.6), healthLevel(0.8), healthLevel(null)]).toEqual(['good', 'warn', 'bad', null])
   })
 })
